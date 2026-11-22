@@ -1,0 +1,36 @@
+{
+  "componentId": "markdown-blocks",
+  "title": "GFM Block Tokenizer & Preview Model (Headings, Task Lists, Code Fences, Blockquotes)",
+  "status": "pending",
+  "legacySource": "tools/migration-sdk/src/legacy/markdown-blocks.ts",
+  "legacyHarnessEntry": "markdown-blocks",
+  "rustModule": "rust/crates/marktext-core/src/markdown_blocks.rs",
+  "rustSubcommand": "markdown-blocks",
+  "gpuiView": "rust/crates/marktext-gpui/src/main.rs",
+  "corpusDir": "evals/corpus",
+  "allowedPaths": [
+    "rust/crates/marktext-core/",
+    "rust/crates/marktext-gpui/",
+    "config/migration-flags/dev.json",
+    "evals/corpus/",
+    "migrations/markdown-blocks.json"
+  ],
+  "forbiddenPaths": [
+    "config/migration-flags/prod.json",
+    ".github/CODEOWNERS",
+    ".github/workflows/",
+    "tools/migration-sdk/src/legacy/markdown-blocks.ts"
+  ],
+  "perfBudget": {
+    "minSpeedupRatio": 1.2,
+    "maxP95Ms": 15.0,
+    "requireExactParity": true
+  },
+  "acceptanceCriteria": [
+    "Implement rust/crates/marktext-core/src/markdown_blocks.rs to match tools/migration-sdk/src/legacy/markdown-blocks.ts exactly on every file in evals/corpus/.",
+    "Support block kinds: heading (level 1-6), code_fence (lang, code), task_item (checked, text), blockquote (text), hr, and paragraph (text).",
+    "Wire the migrated Rust block renderer into marktext-gpui when the markdown-blocks flag is migrated, while preserving legacy fallback.",
+    "Enable markdown-blocks in config/migration-flags/dev.json ONLY (never touch prod.json).",
+    "Add Rust unit tests and a headless GPUI test verifying block rendering."
+  ]
+}

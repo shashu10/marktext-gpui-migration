@@ -1,0 +1,34 @@
+{
+  "componentId": "outline-toc",
+  "title": "Markdown Document Outline / TOC & GitHub Slug Extractor",
+  "status": "migrated",
+  "legacySource": "packages/desktop/src/renderer/src/util/sourceModeToc.ts & packages/muya/src/utils/slug.ts",
+  "legacyHarnessEntry": "outline-toc",
+  "rustModule": "rust/crates/marktext-core/src/outline_toc.rs",
+  "rustSubcommand": "outline-toc",
+  "gpuiView": "rust/crates/marktext-gpui/src/main.rs",
+  "corpusDir": "evals/corpus",
+  "allowedPaths": [
+    "rust/crates/marktext-core/",
+    "rust/crates/marktext-gpui/",
+    "config/migration-flags/dev.json",
+    "evals/corpus/"
+  ],
+  "forbiddenPaths": [
+    "config/migration-flags/prod.json",
+    ".github/CODEOWNERS",
+    ".github/workflows/",
+    "packages/desktop/src/renderer/src/util/sourceModeToc.ts",
+    "packages/muya/src/utils/slug.ts"
+  ],
+  "perfBudget": {
+    "minSpeedupRatio": 1.2,
+    "maxP95Ms": 10.0,
+    "requireExactParity": true
+  },
+  "acceptanceCriteria": [
+    "Matches MarkText getMarkdownHeadingLines: ATX headings (#..######) and setext headings (===/---), ignoring lines inside backtick/tilde fenced code blocks.",
+    "Generates Unicode-aware githubSlug matching packages/muya/src/utils/slug.ts (issue #5292) including CJK and accented characters.",
+    "Sidebar outline in marktext-gpui renders heading hierarchy and line numbers from marktext-core."
+  ]
+}

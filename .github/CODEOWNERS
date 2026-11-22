@@ -1,0 +1,9 @@
+# Enterprise Migration Governance — Required Human Reviewers
+# Cloud Agents and automated PRs cannot self-merge; human CODEOWNERS approval is mandatory.
+
+/rust/ @shashu10
+/config/migration-flags/ @shashu10
+/migrations/ @shashu10
+/tools/migration-sdk/ @shashu10
+/.cursor/ @shashu10
+/.github/ @shashu10

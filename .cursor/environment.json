@@ -1,0 +1,16 @@
+{
+  "name": "marktext-gpui-migration",
+  "user": "ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "install": "pnpm --dir tools/migration-sdk install && cargo fetch --manifest-path rust/Cargo.toml && cargo build --release --manifest-path rust/Cargo.toml -p marktext-core",
+  "terminals": [
+    {
+      "name": "migration-flags",
+      "command": "pnpm --dir tools/migration-sdk flags",
+      "description": "Inspect current dev/staging/prod feature flag migration state"
+    }
+  ]
+}

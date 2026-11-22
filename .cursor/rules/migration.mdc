@@ -1,0 +1,24 @@
+---
+description: Enterprise guardrails for incremental MarkText -> MarkText-GPUI migration work
+globs: rust/**, config/migration-flags/**, migrations/**, tools/migration-sdk/**
+alwaysApply: false
+---
+
+# MarkText -> MarkText-GPUI Migration Guardrails
+
+Follow these rules on every local or Cloud Agent migration task:
+
+1. **Read the component contract first:** Before editing any code, read `migrations/<component>.json` and strictly stay within its `allowedPaths`, `perfBudget`, and `acceptanceCriteria`.
+2. **Respect protected governance & production paths:** NEVER modify:
+   - `config/migration-flags/prod.json`
+   - `.github/CODEOWNERS`
+   - `.github/workflows/`
+   Only enable newly migrated components in `config/migration-flags/dev.json` unless explicitly approved via staged promotion.
+3. **Preserve strangler-fig fallback:** NEVER delete, rename, or break legacy MarkText TypeScript code in `packages/` or `tools/migration-sdk/src/legacy/`. Both legacy and Rust paths must coexist cleanly.
+4. **Zero panics on untrusted Markdown:** Never use `.unwrap()` or `.expect()` on untrusted Markdown input in `rust/crates/marktext-core/`. Return safe defaults or structured `Result` errors instead.
+5. **Mandatory verification before opening a PR:**
+   - Add Rust unit tests covering edge cases (GFM syntax, CJK/Unicode, malformed input).
+   - Verify 100% parity against `evals/corpus/` by running:
+     `pnpm --dir tools/migration-sdk qa --component <id> --deterministic-only`
+   - Include a headless GPUI test (`#[gpui::test]`) whenever modifying `rust/crates/marktext-gpui/`.
+6. **PR governance & human sign-off:** Always open PRs with the `migration` label (and `component:<id>` label when applicable). NEVER self-merge or bypass branch protection — human `CODEOWNERS` approval is mandatory.

@@ -1,0 +1,24 @@
+{
+  "environment": "staging",
+  "description": "Staging environment — word-count promoted to Rust; outline-toc running in shadow dual-run parity mode; markdown-blocks still legacy.",
+  "components": {
+    "word-count": {
+      "mode": "migrated",
+      "engine": "rust-core",
+      "shadowSampleRate": 1.0,
+      "fallbackOnError": true
+    },
+    "outline-toc": {
+      "mode": "shadow",
+      "engine": "legacy-ts",
+      "shadowSampleRate": 1.0,
+      "fallbackOnError": true
+    },
+    "markdown-blocks": {
+      "mode": "legacy",
+      "engine": "legacy-ts",
+      "shadowSampleRate": 0.0,
+      "fallbackOnError": true
+    }
+  }
+}

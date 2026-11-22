@@ -1,0 +1,211 @@
+name: Migration QA Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Target migration component ID (e.g., outline-toc, word-count, markdown-blocks)"
+        required: true
+        default: "outline-toc"
+        type: string
+      deterministic_only:
+        description: "Run deterministic Phase A checks only (skip Phase B @cursor/sdk QA review)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  migration-qa:
+    name: Independent Migration QA Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'migration')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm 10
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust -> target"
+
+      - name: Install Linux GPUI system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libssl-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libxcb1-dev \
+            libfontconfig1-dev \
+            libvulkan-dev \
+            mesa-vulkan-drivers \
+            libasound2-dev
+
+      - name: Install migration-sdk dependencies
+        run: pnpm --dir tools/migration-sdk install
+
+      - name: Build marktext-core release binary
+        run: cargo build --release --manifest-path rust/Cargo.toml -p marktext-core
+
+      - name: Detect target migration component and base ref
+        id: target
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_COMPONENT: ${{ inputs.component }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            COMPONENT="${INPUT_COMPONENT:-outline-toc}"
+            BASE_REF="${REF_NAME:-main}"
+          else
+            BASE_REF="${PR_BASE_REF:-main}"
+            COMPONENT="$(python3 -c 'import json, os; labels = json.loads(os.environ.get("PR_LABELS_JSON") or "[]"); print(next((l.split("component:", 1)[1].strip() for l in labels if isinstance(l, str) and l.startswith("component:") and len(l) > 10), "outline-toc"))')"
+          fi
+
+          echo "Detected component: ${COMPONENT}"
+          echo "Detected base ref: origin/${BASE_REF}"
+          echo "component=${COMPONENT}" >> "$GITHUB_OUTPUT"
+          echo "base_ref=${BASE_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Migration QA CLI
+        id: run_qa
+        shell: bash
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          COMPONENT: ${{ steps.target.outputs.component }}
+          BASE_REF: ${{ steps.target.outputs.base_ref }}
+          DETERMINISTIC_ONLY_INPUT: ${{ inputs.deterministic_only }}
+        run: |
+          set +e
+          SCORECARD_PATH="${GITHUB_WORKSPACE}/qa-scorecard.md"
+          EXTRA_ARGS=()
+
+          if [ "${DETERMINISTIC_ONLY_INPUT}" = "true" ]; then
+            echo "Running deterministic Phase A checks only (workflow_dispatch deterministic_only=true)."
+            EXTRA_ARGS+=(--deterministic-only)
+          elif [ -z "${CURSOR_API_KEY:-}" ]; then
+            echo "CURSOR_API_KEY secret is not configured; passing --deterministic-only explicitly (no mocked LLM review)."
+            EXTRA_ARGS+=(--deterministic-only)
+          else
+            echo "CURSOR_API_KEY detected; running full Phase A + Phase B @cursor/sdk QA gate."
+          fi
+
+          pnpm --dir tools/migration-sdk qa \
+            --component "${COMPONENT}" \
+            --base "origin/${BASE_REF}" \
+            --output-md "${SCORECARD_PATH}" \
+            "${EXTRA_ARGS[@]}"
+          QA_EXIT=$?
+
+          echo "QA CLI exited with status ${QA_EXIT}"
+          echo "exit_code=${QA_EXIT}" >> "$GITHUB_OUTPUT"
+          echo "scorecard_path=${SCORECARD_PATH}" >> "$GITHUB_OUTPUT"
+
+          if [ -f "${SCORECARD_PATH}" ]; then
+            cat "${SCORECARD_PATH}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0
+
+      - name: Post or update PR QA scorecard comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          SCORECARD_PATH: ${{ steps.run_qa.outputs.scorecard_path }}
+          QA_EXIT_CODE: ${{ steps.run_qa.outputs.exit_code }}
+          COMPONENT: ${{ steps.target.outputs.component }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- marktext-migration-qa-scorecard -->';
+            const scorecardPath = process.env.SCORECARD_PATH;
+            const exitCode = process.env.QA_EXIT_CODE || 'unknown';
+            const component = process.env.COMPONENT || 'outline-toc';
+
+            let content;
+            if (scorecardPath && fs.existsSync(scorecardPath)) {
+              content = fs.readFileSync(scorecardPath, 'utf8').trim();
+            } else {
+              content = [
+                `## Migration QA Gate — \`${component}\``,
+                '',
+                `QA CLI exited with code \`${exitCode}\` before writing \`qa-scorecard.md\`.`,
+                'Inspect the GitHub Actions job logs for startup, build, or configuration diagnostics.'
+              ].join('\n');
+            }
+
+            const body = `${marker}\n${content}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }
+
+      - name: Enforce QA gate verdict
+        if: always()
+        shell: bash
+        env:
+          QA_EXIT_CODE: ${{ steps.run_qa.outputs.exit_code }}
+        run: |
+          if [ -z "${QA_EXIT_CODE:-}" ]; then
+            echo "::error::Migration QA step did not produce an exit code (earlier setup/build step failed)."
+            exit 1
+          fi
+          if [ "${QA_EXIT_CODE}" -eq 1 ]; then
+            echo "::error::Migration QA failed with startup/configuration error (exit code 1)."
+            exit 1
+          fi
+          if [ "${QA_EXIT_CODE}" -ne 0 ]; then
+            echo "::error::Migration QA BLOCKED PR merge (exit code ${QA_EXIT_CODE}). Review the QA scorecard comment."
+            exit "${QA_EXIT_CODE}"
+          fi
+          echo "Migration QA gate passed (PASS_FOR_HUMAN_REVIEW). Awaiting required CODEOWNERS approval."

@@ -1,0 +1,37 @@
+node_modules
+packages/*/node_modules
+dist
+out
+packages/*/out
+packages/*/dist
+.DS_Store
+.eslintcache
+*.log*
+.trae/
+# Keep .cursor/ tracked for Cursor Cloud Agent environment.json, Dockerfile, and rules
+doc/
+# Ignore temp artifacts
+temp/
+logs/
+test-results/
+playwright-report/
+.playwright-mcp/
+*.min.json
+.claude/settings.local.json
+.claude/
+.codex/
+.agents/
+.agent/
+
+# === AI SDLC Migration Prototype Ignores ===
+context/
+.env
+.env.*
+!.env.example
+.pnpm-store/
+rust/target/
+.tmp-marktext/
+evals/runs/*.json
+logs/
+tmp/
+.run-artifacts/
