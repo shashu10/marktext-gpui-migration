@@ -42,20 +42,18 @@ All agents writing SDK or Cloud Agent code must follow these non-negotiable prac
 
 ## 3. Repository Layout & Ownership Boundaries
 
+> Update this table once the architecture and language are locked in after brainstorming.
+
 | Path | Purpose | Ownership / Notes |
 |---|---|---|
-| `AGENTS.md` | Agent operating rules & parallel workflow protocol | Coordinator |
-| `README.md` | One-command quickstart (`./run-demo.sh`), Cloud Agent env setup, built vs. design-only | Keep strictly in sync with working commands |
+| `AGENTS.md` | Agent operating rules & parallel workflow protocol | Coordinator updates as architecture evolves |
+| `README.md` | One-command quickstart, Cloud Agent env setup, built vs. design-only | Keep strictly in sync with working commands |
 | `docs/WRITEUP.md` | 1–2 page executive/technical write-up deliverable | Keep concise (max 2 pages) |
-| `docs/ARCHITECTURE.md` | Detailed architecture, data flow, extension seams | Shared contract spec |
-| `packages/` | Upstream MarkText (`desktop`, `muya`, `website`) ~111k LOC legacy baseline | Legacy track (never break strangler-fig fallback) |
-| `config/migration-flags/` | Per-environment rollout flags (`dev.json`, `staging.json`, `prod.json`) | `prod.json` is human-only (`HARD_BLOCK`) |
-| `migrations/` | Declarative component migration contracts (`word-count.json`, `outline-toc.json`, `markdown-blocks.json`) | Defines allowed/forbidden paths & perf budgets |
-| `rust/` | Cargo workspace (`marktext-core` parity CLI + `marktext-gpui` native Zed GPUI desktop app & headless tests) | Rust/GPUI workstream |
-| `tools/migration-sdk/` | TypeScript `@cursor/sdk` orchestrator (`dispatch`, `qa`, `demo`, `flags`), policy gates & Vitest tests | SDK/QA workstream |
-| `evals/` | Golden Markdown parity corpus (`evals/corpus/`) & telemetry ledger (`evals/runs/`) | Proof-of-work & before/after metrics |
-| `.cursor/` | Cloud Agent custom environment (`Dockerfile`, `environment.json`, `rules/migration.mdc`) | Must be reproducible on a fresh Cloud Agent VM |
-| `.github/` | `CODEOWNERS` + `workflows/migration-qa.yml` (runs SDK QA gate on `migration`-labeled PRs) | Governance (immutable to migration agents) |
+| `docs/ARCHITECTURE.md` | Detailed architecture, data flow, extension seams | Updated before parallel implementation starts |
+| `src/` | Core orchestrator / SDK integration / CLI or API / UI | Split by module so parallel agents don't collide |
+| `fixtures/` or `sandbox-repo/` | Synthetic enterprise repo(s) & multi-env configs | Deterministic baseline for before/after runs |
+| `evals/` | Verification harness, test cases, metrics collector | Owns proof-of-work and before/after reporting |
+| `.cursor/` | Cloud Agent custom environment config (e.g., `environment.json`, rules) | Must be reproducible on a fresh Cloud Agent VM |
 | `context/` | Local-only interview prep & prompt notes (**gitignored**) | Never reference from production code or commit |
 
 ---

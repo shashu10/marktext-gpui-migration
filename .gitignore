@@ -1,37 +1,28 @@
-node_modules
-packages/*/node_modules
-dist
-out
-packages/*/out
-packages/*/dist
-.DS_Store
-.eslintcache
-*.log*
-.trae/
-# Keep .cursor/ tracked for Cursor Cloud Agent environment.json, Dockerfile, and rules
-doc/
-# Ignore temp artifacts
-temp/
-logs/
-test-results/
-playwright-report/
-.playwright-mcp/
-*.min.json
-.claude/settings.local.json
-.claude/
-.codex/
-.agents/
-.agent/
-
-# === AI SDLC Migration Prototype Ignores ===
+# Private interview prep & context (keep local; do not push to submission repo)
 context/
+
+# Secrets & environment
 .env
 .env.*
 !.env.example
-.pnpm-store/
-rust/target/
-.tmp-marktext/
-evals/runs/*.json
+
+# OS & editor
+.DS_Store
+*.swp
+
+# Node / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Run artifacts / logs
 logs/
 tmp/
 .run-artifacts/
