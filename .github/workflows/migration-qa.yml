@@ -32,10 +32,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm 10
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -59,8 +57,12 @@ jobs:
             pkg-config \
             libssl-dev \
             libxkbcommon-dev \
+            libxkbcommon-x11-dev \
             libwayland-dev \
             libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
             libfontconfig1-dev \
             libvulkan-dev \
             mesa-vulkan-drivers \
