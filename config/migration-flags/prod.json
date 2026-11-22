@@ -1,10 +1,10 @@
 {
   "environment": "prod",
-  "description": "Production environment — protected by policy gate & CODEOWNERS. Only human-approved promotion PRs may modify this file.",
+  "description": "Production environment \u2014 protected by policy gate & CODEOWNERS. Only human-approved promotion PRs may modify this file.",
   "components": {
     "word-count": {
-      "mode": "shadow",
-      "engine": "legacy-ts",
+      "mode": "migrated",
+      "engine": "rust-core",
       "shadowSampleRate": 0.25,
       "fallbackOnError": true
     },
