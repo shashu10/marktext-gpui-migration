@@ -59,7 +59,10 @@ export function loadEnvConfig(repoRoot: string = resolveRepoRoot()): LoadedEnvCo
 
   const rawKey = process.env.CURSOR_API_KEY?.trim();
   const apiKey = rawKey && rawKey.length > 0 ? rawKey : undefined;
-  const modelId = process.env.CURSOR_MODEL_ID?.trim() || 'composer-2.5';
+  const modelId =
+    process.env.CURSOR_MODEL_ID?.trim() ||
+    process.env.CURSOR_MODEL?.trim() ||
+    'composer-2.5';
 
   return {
     repoRoot,

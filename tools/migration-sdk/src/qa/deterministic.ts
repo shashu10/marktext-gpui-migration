@@ -90,8 +90,13 @@ async function runCargoCommand(
   args: string[],
 ): Promise<CargoCheckResult> {
   const manifestPath = path.join(repoRoot, 'rust', 'Cargo.toml');
-  const fullArgs = [...args, '--manifest-path', manifestPath];
-  const command = `cargo ${args.join(' ')} --manifest-path rust/Cargo.toml`;
+  const [subcommand, ...rest] = args;
+  const fullArgs = subcommand
+    ? [subcommand, '--manifest-path', manifestPath, ...rest]
+    : args;
+  const command = subcommand
+    ? `cargo ${subcommand} --manifest-path rust/Cargo.toml ${rest.join(' ')}`.trim()
+    : `cargo ${args.join(' ')}`;
 
   if (!fs.existsSync(manifestPath)) {
     return {
