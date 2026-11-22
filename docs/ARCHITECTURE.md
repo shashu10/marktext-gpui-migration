@@ -71,7 +71,7 @@ This prototype demonstrates **the messy middle** of an incremental, **strangler-
 | `packages/desktop/`, `packages/muya/` | Upstream MarkText (~111k LOC Electron + TypeScript Muya editor) | Read-only baseline (except scoped feature-flag hooks / simulated legacy PR) |
 | `config/migration-flags/{dev,staging,prod}.json` | Per-environment feature flags (`legacy` \| `shadow` \| `migrated`) | `agent-core` |
 | `migrations/*.json` | Declarative component migration contracts (source, target, corpus, budgets, allowed paths) | `agent-core` |
-| `rust/Cargo.toml`, `rust/crates/marktext-core/` | Pure Rust migrated subsystems (`outline-toc`, `doc-stats`, `markdown-blocks` target) + CLI runner for parity & benchmarks | `agent-rust-gpui` |
+| `rust/Cargo.toml`, `rust/crates/marktext-core/` | Pure Rust migrated subsystems (`word-count`, `outline-toc`, `markdown-blocks` target) + CLI runner for parity & benchmarks | `agent-rust-gpui` |
 | `rust/crates/marktext-gpui/` | Native Zed GPUI desktop app rendering mid-migration MarkText UI + headless `#[gpui::test]` UI regression suite | `agent-rust-gpui` |
 | `tools/migration-sdk/` | TypeScript CLI & `@cursor/sdk` integration (`dispatch`, `qa`, `demo`, deterministic harness, telemetry) | `agent-sdk-qa` |
 | `evals/corpus/`, `evals/runs/` | Golden Markdown parity test corpus + JSON/Markdown run telemetry ledger | `agent-sdk-qa` |
@@ -88,13 +88,13 @@ This prototype demonstrates **the messy middle** of an incremental, **strangler-
 {
   "environment": "staging",
   "components": {
-    "outline-toc": {
+    "word-count": {
       "mode": "migrated",
       "engine": "rust-core",
       "shadowSampleRate": 1.0,
       "fallbackOnError": true
     },
-    "doc-stats": {
+    "outline-toc": {
       "mode": "shadow",
       "engine": "legacy-ts",
       "shadowSampleRate": 1.0,
@@ -114,10 +114,13 @@ This prototype demonstrates **the messy middle** of an incremental, **strangler-
 ```json
 {
   "componentId": "outline-toc",
-  "title": "Markdown Document Outline / TOC Extractor",
-  "legacyEntry": "tools/migration-sdk/src/legacy/outline-toc.ts",
-  "rustCommand": ["outline-toc"],
-  "gpuiView": "rust/crates/marktext-gpui/src/views/outline_panel.rs",
+  "title": "Markdown Document Outline / TOC & GitHub Slug Extractor",
+  "status": "migrated",
+  "legacySource": "packages/desktop/src/renderer/src/util/sourceModeToc.ts & packages/muya/src/utils/slug.ts",
+  "legacyHarnessEntry": "outline-toc",
+  "rustModule": "rust/crates/marktext-core/src/outline_toc.rs",
+  "rustSubcommand": "outline-toc",
+  "gpuiView": "rust/crates/marktext-gpui/src/main.rs",
   "corpusDir": "evals/corpus",
   "allowedPaths": [
     "rust/crates/marktext-core/",
@@ -128,11 +131,13 @@ This prototype demonstrates **the messy middle** of an incremental, **strangler-
   "forbiddenPaths": [
     "config/migration-flags/prod.json",
     ".github/CODEOWNERS",
-    ".github/workflows/"
+    ".github/workflows/",
+    "packages/desktop/src/renderer/src/util/sourceModeToc.ts",
+    "packages/muya/src/utils/slug.ts"
   ],
   "perfBudget": {
-    "minSpeedupRatio": 1.5,
-    "maxP95Ms": 5.0,
+    "minSpeedupRatio": 1.2,
+    "maxP95Ms": 10.0,
     "requireExactParity": true
   }
 }
@@ -140,7 +145,7 @@ This prototype demonstrates **the messy middle** of an incremental, **strangler-
 
 ### 4.3 `marktext-core` CLI Parity Interface
 `marktext-core-cli <subcommand> --input <file.md> [--iterations N]`
-- Subcommands: `outline-toc`, `doc-stats`, `markdown-blocks`
+- Subcommands: `word-count`, `outline-toc`, `markdown-blocks`
 - Outputs deterministic JSON to stdout:
   ```json
   {
